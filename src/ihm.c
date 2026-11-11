@@ -16,7 +16,8 @@ void ihm_initialiser(void) {
         init_pair(2, COLOR_RED, COLOR_BLACK);     // Alerte stock critique
         init_pair(3, COLOR_BLACK, COLOR_CYAN);    // Sélection courante
         init_pair(4, COLOR_GREEN, COLOR_BLACK);   // Succès
-        init_pair(5, COLOR_YELLOW, COLOR_BLACK);  // En-têtes et indicateurs
+        init_pair(5, COLOR_YELLOW, COLOR_BLACK);  // Indicateurs défilement
+        init_pair(6, COLOR_BLACK, COLOR_WHITE);   // Champs de saisie
     }
 }
 
@@ -27,7 +28,6 @@ void ihm_terminer(void) {
 void ihm_afficher_tableau_stock(const Stock *stock, int ligne_selectionnee, int premier_affiche) {
     clear();
 
-    // 1. En-tête
     attron(A_BOLD | COLOR_PAIR(1));
     mvprintw(1, 2, "======================= ATELIER SAC - GESTION DES STOCKS =======================");
     mvprintw(3, 2, "%-8s %-18s %-12s %-6s %-10s %-10s %-10s",
@@ -38,7 +38,6 @@ void ihm_afficher_tableau_stock(const Stock *stock, int ligne_selectionnee, int 
     if (stock == NULL || stock->total == 0) {
         mvprintw(6, 4, "[!] Aucun sac enregistre dans le stock actuellement.");
     } else {
-        // Hauteur utile réservée pour la liste
         int zone_debut_y = 5;
         int lignes_visibles = LINES - 9;
         if (lignes_visibles < 1) lignes_visibles = 1;
@@ -48,7 +47,6 @@ void ihm_afficher_tableau_stock(const Stock *stock, int ligne_selectionnee, int 
             dernier_affiche = stock->total;
         }
 
-        // 2. Affichage des lignes visibles
         for (int i = premier_affiche; i < dernier_affiche; i++) {
             int y = zone_debut_y + (i - premier_affiche);
             int est_alerte = (stock->articles[i].quantite <= stock->articles[i].seuil_alerte);
@@ -73,7 +71,6 @@ void ihm_afficher_tableau_stock(const Stock *stock, int ligne_selectionnee, int 
             attroff(COLOR_PAIR(1) | COLOR_PAIR(2) | COLOR_PAIR(3) | A_BOLD);
         }
 
-        // 3. Indicateurs de défilement
         attron(COLOR_PAIR(5) | A_BOLD);
         if (premier_affiche > 0) {
             mvprintw(zone_debut_y - 1, 75, "[^]");
@@ -83,15 +80,13 @@ void ihm_afficher_tableau_stock(const Stock *stock, int ligne_selectionnee, int 
         }
         attroff(COLOR_PAIR(5) | A_BOLD);
 
-        // Compteur d'éléments
         mvprintw(LINES - 4, 2, "Article %d sur %d", ligne_selectionnee + 1, stock->total);
     }
 
-    // 4. Barre d'aide
     attron(A_DIM);
     mvprintw(LINES - 3, 2, "--------------------------------------------------------------------------------");
     attroff(A_DIM);
-    mvprintw(LINES - 2, 2, "[HAUT/BAS] Naviguer/Defiler | [A] Ajouter | [S] Supprimer | [R] Chercher | [Q] Quitter");
+    mvprintw(LINES - 2, 2, "[HAUT/BAS] Naviguer | [A] Ajouter | [M] Modifier | [S] Suppr | [R] Chercher | [Q] Quitter");
     refresh();
 }
 
@@ -214,6 +209,63 @@ int ihm_formulaire_ajouter_sac(Sac *s) {
 
     mvwgetnstr(win, 13, 29, buffer, 31);
     s->prix_unitaire = atof(buffer);
+
+    noecho();
+    curs_set(0);
+    delwin(win);
+    return 1;
+}
+
+int ihm_formulaire_modifier_sac(Sac *s) {
+    int h = 18, w = 62;
+    int y = (LINES - h) / 2;
+    int x = (COLS - w) / 2;
+
+    WINDOW *win = newwin(h, w, y, x);
+    box(win, 0, 0);
+
+    wattron(win, A_BOLD | COLOR_PAIR(5));
+    mvwprintw(win, 1, (w - 28) / 2, "=== MODIFIER UN SAC ===");
+    wattroff(win, A_BOLD | COLOR_PAIR(5));
+
+    // Affichage des valeurs actuelles
+    mvwprintw(win, 3,  4, "Reference (fixe)   : %s", s->reference);
+    mvwprintw(win, 5,  4, "Nouv. Modele       [%s] :", s->modele);
+    mvwprintw(win, 7,  4, "Nouv. Couleur      [%s] :", s->couleur);
+    mvwprintw(win, 9,  4, "Nouv. Taille       [%s] :", s->taille);
+    mvwprintw(win, 11, 4, "Nouv. Quantite     [%d] :", s->quantite);
+    mvwprintw(win, 13, 4, "Nouv. Seuil alerte [%d] :", s->seuil_alerte);
+    mvwprintw(win, 15, 4, "Nouv. Prix (EUR)   [%.2f] :", s->prix_unitaire);
+
+    echo();
+    curs_set(1);
+    wrefresh(win);
+
+    char buffer[64];
+
+    // Modèle
+    mvwgetnstr(win, 5, 36, buffer, MAX_STR - 1);
+    if (strlen(buffer) > 0) strcpy(s->modele, buffer);
+
+    // Couleur
+    mvwgetnstr(win, 7, 36, buffer, MAX_STR - 1);
+    if (strlen(buffer) > 0) strcpy(s->couleur, buffer);
+
+    // Taille
+    mvwgetnstr(win, 9, 36, buffer, 3);
+    if (strlen(buffer) > 0) strcpy(s->taille, buffer);
+
+    // Quantité
+    mvwgetnstr(win, 11, 36, buffer, 31);
+    if (strlen(buffer) > 0) s->quantite = atoi(buffer);
+
+    // Seuil d'alerte
+    mvwgetnstr(win, 13, 36, buffer, 31);
+    if (strlen(buffer) > 0) s->seuil_alerte = atoi(buffer);
+
+    // Prix unitaire
+    mvwgetnstr(win, 15, 36, buffer, 31);
+    if (strlen(buffer) > 0) s->prix_unitaire = atof(buffer);
 
     noecho();
     curs_set(0);

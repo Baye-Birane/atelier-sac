@@ -7,18 +7,17 @@
 int main(void) {
     Stock stock;
     stock.capacite = 50;
-    stock.total = 25;
+    stock.total = 12;
     stock.articles = malloc(stock.capacite * sizeof(Sac));
 
-    // Simulation de 25 sacs pour tester le scrolling
     for (int i = 0; i < stock.total; i++) {
         snprintf(stock.articles[i].reference, MAX_REF, "SAC%03d", i + 1);
         snprintf(stock.articles[i].modele, MAX_STR, "Modele %d", i + 1);
         strcpy(stock.articles[i].couleur, (i % 2 == 0) ? "Noir" : "Marron");
         strcpy(stock.articles[i].taille, (i % 3 == 0) ? "L" : "M");
-        stock.articles[i].quantite = (i % 5 == 0) ? 2 : 15; // Les multiples de 5 seront en alerte rouge
+        stock.articles[i].quantite = (i % 4 == 0) ? 2 : 18;
         stock.articles[i].seuil_alerte = 5;
-        stock.articles[i].prix_unitaire = 25.0 + (i * 2.5);
+        stock.articles[i].prix_unitaire = 35.0 + (i * 3.0);
     }
 
     ihm_initialiser();
@@ -28,11 +27,9 @@ int main(void) {
     int en_cours = 1;
 
     while (en_cours) {
-        // Hauteur de la zone visible
         int lignes_visibles = LINES - 9;
         if (lignes_visibles < 1) lignes_visibles = 1;
 
-        // Calcul automatique du défilement
         if (selection < premier_affiche) {
             premier_affiche = selection;
         } else if (selection >= premier_affiche + lignes_visibles) {
@@ -62,11 +59,24 @@ int main(void) {
                 if (ihm_formulaire_ajouter_sac(&nouveau)) {
                     if (stock.total < stock.capacite) {
                         stock.articles[stock.total++] = nouveau;
-                        selection = stock.total - 1; // Sélectionner le nouvel ajout
+                        selection = stock.total - 1;
                         ihm_afficher_message("SUCCES", "Le sac a ete ajoute au stock.", 0);
                     } else {
                         ihm_afficher_message("ERREUR", "Memoire du stock saturee !", 1);
                     }
+                }
+                break;
+            }
+
+            case 'm':
+            case 'M': {
+                if (stock.total > 0) {
+                    // Passage par référence du sac sélectionné
+                    if (ihm_formulaire_modifier_sac(&stock.articles[selection])) {
+                        ihm_afficher_message("SUCCES", "Fiche article mise a jour !", 0);
+                    }
+                } else {
+                    ihm_afficher_message("ERREUR", "Aucun sac a modifier.", 1);
                 }
                 break;
             }
