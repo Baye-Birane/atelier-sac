@@ -13,10 +13,10 @@ void ihm_initialiser(void) {
     if (has_colors()) {
         start_color();
         init_pair(1, COLOR_WHITE, COLOR_BLACK);   // Normal
-        init_pair(2, COLOR_RED, COLOR_BLACK);     // Alerte stock faible
+        init_pair(2, COLOR_RED, COLOR_BLACK);     // Alerte stock critique
         init_pair(3, COLOR_BLACK, COLOR_CYAN);    // Sélection courante
-        init_pair(4, COLOR_GREEN, COLOR_BLACK);   // Messages de succès
-        init_pair(5, COLOR_YELLOW, COLOR_BLUE);   // Fenêtres pop-up
+        init_pair(4, COLOR_GREEN, COLOR_BLACK);   // Succès
+        init_pair(5, COLOR_YELLOW, COLOR_BLACK);  // En-têtes et indicateurs
     }
 }
 
@@ -24,8 +24,10 @@ void ihm_terminer(void) {
     endwin();
 }
 
-void ihm_afficher_tableau_stock(const Stock *stock, int ligne_selectionnee) {
+void ihm_afficher_tableau_stock(const Stock *stock, int ligne_selectionnee, int premier_affiche) {
     clear();
+
+    // 1. En-tête
     attron(A_BOLD | COLOR_PAIR(1));
     mvprintw(1, 2, "======================= ATELIER SAC - GESTION DES STOCKS =======================");
     mvprintw(3, 2, "%-8s %-18s %-12s %-6s %-10s %-10s %-10s",
@@ -36,7 +38,19 @@ void ihm_afficher_tableau_stock(const Stock *stock, int ligne_selectionnee) {
     if (stock == NULL || stock->total == 0) {
         mvprintw(6, 4, "[!] Aucun sac enregistre dans le stock actuellement.");
     } else {
-        for (int i = 0; i < stock->total; i++) {
+        // Hauteur utile réservée pour la liste
+        int zone_debut_y = 5;
+        int lignes_visibles = LINES - 9;
+        if (lignes_visibles < 1) lignes_visibles = 1;
+
+        int dernier_affiche = premier_affiche + lignes_visibles;
+        if (dernier_affiche > stock->total) {
+            dernier_affiche = stock->total;
+        }
+
+        // 2. Affichage des lignes visibles
+        for (int i = premier_affiche; i < dernier_affiche; i++) {
+            int y = zone_debut_y + (i - premier_affiche);
             int est_alerte = (stock->articles[i].quantite <= stock->articles[i].seuil_alerte);
 
             if (i == ligne_selectionnee) {
@@ -47,7 +61,7 @@ void ihm_afficher_tableau_stock(const Stock *stock, int ligne_selectionnee) {
                 attron(COLOR_PAIR(1));
             }
 
-            mvprintw(5 + i, 2, "%-8s %-18s %-12s %-6s %-10d %-10d %-10.2f",
+            mvprintw(y, 2, "%-8s %-18s %-12s %-6s %-10d %-10d %-10.2f",
                      stock->articles[i].reference,
                      stock->articles[i].modele,
                      stock->articles[i].couleur,
@@ -58,18 +72,31 @@ void ihm_afficher_tableau_stock(const Stock *stock, int ligne_selectionnee) {
 
             attroff(COLOR_PAIR(1) | COLOR_PAIR(2) | COLOR_PAIR(3) | A_BOLD);
         }
+
+        // 3. Indicateurs de défilement
+        attron(COLOR_PAIR(5) | A_BOLD);
+        if (premier_affiche > 0) {
+            mvprintw(zone_debut_y - 1, 75, "[^]");
+        }
+        if (dernier_affiche < stock->total) {
+            mvprintw(zone_debut_y + lignes_visibles, 75, "[v]");
+        }
+        attroff(COLOR_PAIR(5) | A_BOLD);
+
+        // Compteur d'éléments
+        mvprintw(LINES - 4, 2, "Article %d sur %d", ligne_selectionnee + 1, stock->total);
     }
 
-    // Barre d'instructions en bas d'écran
+    // 4. Barre d'aide
     attron(A_DIM);
     mvprintw(LINES - 3, 2, "--------------------------------------------------------------------------------");
     attroff(A_DIM);
-    mvprintw(LINES - 2, 2, "[HAUT/BAS] Naviguer | [A] Ajouter | [S] Supprimer | [R] Rechercher | [Q] Quitter");
+    mvprintw(LINES - 2, 2, "[HAUT/BAS] Naviguer/Defiler | [A] Ajouter | [S] Supprimer | [R] Chercher | [Q] Quitter");
     refresh();
 }
 
 void ihm_afficher_message(const char *titre, const char *message, int is_erreur) {
-    int h = 7, w = 50;
+    int h = 7, w = 52;
     int y = (LINES - h) / 2;
     int x = (COLS - w) / 2;
 
@@ -110,7 +137,7 @@ int ihm_boite_confirmation(const char *question) {
         if (ch == 'o' || ch == 'O') {
             rep = 1;
             break;
-        } else if (ch == 'n' || ch == 'N' || ch == 27) { // 27 = Touche Echap
+        } else if (ch == 'n' || ch == 'N' || ch == 27) {
             rep = 0;
             break;
         }
@@ -121,7 +148,7 @@ int ihm_boite_confirmation(const char *question) {
 }
 
 void ihm_saisie_texte(const char *invite, char *tampon, int taille_max) {
-    int h = 7, w = 45;
+    int h = 7, w = 48;
     int y = (LINES - h) / 2;
     int x = (COLS - w) / 2;
 
@@ -143,7 +170,7 @@ void ihm_saisie_texte(const char *invite, char *tampon, int taille_max) {
 }
 
 int ihm_formulaire_ajouter_sac(Sac *s) {
-    int h = 16, w = 55;
+    int h = 16, w = 56;
     int y = (LINES - h) / 2;
     int x = (COLS - w) / 2;
 
@@ -165,28 +192,20 @@ int ihm_formulaire_ajouter_sac(Sac *s) {
     echo();
     curs_set(1);
 
-    // Saisie référence
     wrefresh(win);
     mvwgetnstr(win, 3, 29, s->reference, MAX_REF - 1);
     if (strlen(s->reference) == 0) {
         noecho();
         curs_set(0);
         delwin(win);
-        return 0; // Annulation
+        return 0;
     }
 
-    // Saisie modèle
     mvwgetnstr(win, 5, 29, s->modele, MAX_STR - 1);
-
-    // Saisie couleur
     mvwgetnstr(win, 7, 29, s->couleur, MAX_STR - 1);
-
-    // Saisie taille
     mvwgetnstr(win, 9, 29, s->taille, 3);
 
-    // Saisie numérique
     char buffer[32];
-
     mvwgetnstr(win, 11, 29, buffer, 31);
     s->quantite = atoi(buffer);
 
@@ -199,5 +218,5 @@ int ihm_formulaire_ajouter_sac(Sac *s) {
     noecho();
     curs_set(0);
     delwin(win);
-    return 1; // Saisie réussie
+    return 1;
 }

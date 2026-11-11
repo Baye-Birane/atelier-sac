@@ -1,40 +1,45 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "sac.h"
 #include "ihm.h"
 
 int main(void) {
-    // Allocation dynamique simulée du stock (respect des exigences techniques)
     Stock stock;
-    stock.capacite = 10;
-    stock.total = 2;
+    stock.capacite = 50;
+    stock.total = 25;
     stock.articles = malloc(stock.capacite * sizeof(Sac));
 
-    // Donnée initiale 1
-    strcpy(stock.articles[0].reference, "SAC001");
-    strcpy(stock.articles[0].modele, "Sac a dos cuir");
-    strcpy(stock.articles[0].couleur, "Noir");
-    strcpy(stock.articles[0].taille, "M");
-    stock.articles[0].quantite = 20;
-    stock.articles[0].seuil_alerte = 5;
-    stock.articles[0].prix_unitaire = 49.90;
-
-    // Donnée initiale 2 (Alerte stock critique)
-    strcpy(stock.articles[1].reference, "SAC002");
-    strcpy(stock.articles[1].modele, "Pochette bandoul.");
-    strcpy(stock.articles[1].couleur, "Cognac");
-    strcpy(stock.articles[1].taille, "S");
-    stock.articles[1].quantite = 3;
-    stock.articles[1].seuil_alerte = 5;
-    stock.articles[1].prix_unitaire = 29.00;
+    // Simulation de 25 sacs pour tester le scrolling
+    for (int i = 0; i < stock.total; i++) {
+        snprintf(stock.articles[i].reference, MAX_REF, "SAC%03d", i + 1);
+        snprintf(stock.articles[i].modele, MAX_STR, "Modele %d", i + 1);
+        strcpy(stock.articles[i].couleur, (i % 2 == 0) ? "Noir" : "Marron");
+        strcpy(stock.articles[i].taille, (i % 3 == 0) ? "L" : "M");
+        stock.articles[i].quantite = (i % 5 == 0) ? 2 : 15; // Les multiples de 5 seront en alerte rouge
+        stock.articles[i].seuil_alerte = 5;
+        stock.articles[i].prix_unitaire = 25.0 + (i * 2.5);
+    }
 
     ihm_initialiser();
 
     int selection = 0;
+    int premier_affiche = 0;
     int en_cours = 1;
 
     while (en_cours) {
-        ihm_afficher_tableau_stock(&stock, selection);
+        // Hauteur de la zone visible
+        int lignes_visibles = LINES - 9;
+        if (lignes_visibles < 1) lignes_visibles = 1;
+
+        // Calcul automatique du défilement
+        if (selection < premier_affiche) {
+            premier_affiche = selection;
+        } else if (selection >= premier_affiche + lignes_visibles) {
+            premier_affiche = selection - lignes_visibles + 1;
+        }
+
+        ihm_afficher_tableau_stock(&stock, selection, premier_affiche);
         int ch = getch();
 
         switch (ch) {
@@ -57,6 +62,7 @@ int main(void) {
                 if (ihm_formulaire_ajouter_sac(&nouveau)) {
                     if (stock.total < stock.capacite) {
                         stock.articles[stock.total++] = nouveau;
+                        selection = stock.total - 1; // Sélectionner le nouvel ajout
                         ihm_afficher_message("SUCCES", "Le sac a ete ajoute au stock.", 0);
                     } else {
                         ihm_afficher_message("ERREUR", "Memoire du stock saturee !", 1);
@@ -68,8 +74,7 @@ int main(void) {
             case 's':
             case 'S': {
                 if (stock.total > 0) {
-                    if (ihm_boite_confirmation("Voulez-vous vraiment supprimer cet article ?")) {
-                        // Décalage pour simuler la suppression
+                    if (ihm_boite_confirmation("Voulez-vous supprimer cet article ?")) {
                         for (int i = selection; i < stock.total - 1; i++) {
                             stock.articles[i] = stock.articles[i + 1];
                         }
