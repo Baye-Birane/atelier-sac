@@ -1,0 +1,6 @@
+2026-11-11 17:09:06 | ENTREE | Quantite : 2 | Avant : 0 | Apres : 2
+2026-11-11 17:09:21 | ENTREE | Quantite : 100 | Avant : 2 | Apres : 102
+2026-11-11 17:11:23 | SORTIE | Quantite : 75 | Avant : 102 | Apres : 27
+2026-11-11 17:14:53 | ENTREE | Quantite : 100 | Avant : 27 | Apres : 127
+2026-11-11 17:15:15 | SORTIE | Quantite : 10 | Avant : 127 | Apres : 117
+2026-11-12 14:04:04 | ENTREE | Quantite : 1 | Avant : 117 | Apres : 118

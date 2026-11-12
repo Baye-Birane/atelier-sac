@@ -1,0 +1,19 @@
+# depslib dependency file v1.0
+1793975157 source:c:\users\saliou dieye\documents\ingé\info\projet info\backend\src\fichier.c
+	<stdio.h>
+	<time.h>
+	"fichier.h"
+
+1793975364 c:\users\saliou dieye\documents\ingé\info\projet info\backend\include\fichier.h
+
+1793975196 source:c:\users\saliou dieye\documents\ingé\info\projet info\backend\src\stock.c
+	<stdio.h>
+	"stock.h"
+	"fichier.h"
+
+1793975429 c:\users\saliou dieye\documents\ingé\info\projet info\backend\include\stock.h
+
+1794410599 source:c:\users\saliou dieye\documents\ingé\info\projet info\main.c
+	<stdio.h>
+	"stock.h"
+
